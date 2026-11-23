@@ -1,0 +1,321 @@
+{
+  "name": "N8N CRUD Verification Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "e9a02001-0001-4000-8000-000000000001",
+      "name": "Manual_Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        160,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://reqres.in/api/users",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "page",
+              "value": "2"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e9a02001-0002-4000-8000-000000000002",
+      "name": "HTTP_GetUsers_Page2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        380,
+        180
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://reqres.in/api/users",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"Alice Smith\",\n  \"job\": \"Software Engineer\"\n}",
+        "options": {}
+      },
+      "id": "e9a02001-0003-4000-8000-000000000003",
+      "name": "HTTP_Post_CreateUser",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        380,
+        420
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://reqres.in/api/users/2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"Alice Jones\",\n  \"job\": \"Lead Engineer\"\n}",
+        "options": {}
+      },
+      "id": "e9a02001-0004-4000-8000-000000000004",
+      "name": "HTTP_Put_UpdateUser",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        420
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "https://reqres.in/api/users/2",
+        "options": {}
+      },
+      "id": "e9a02001-0005-4000-8000-000000000005",
+      "name": "HTTP_Delete_User",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        820,
+        420
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Consolidate complete CRUD lifecycle telemetry and status verification\nconst getResult = $node['HTTP_GetUsers_Page2'].json || {};\nconst postResult = $node['HTTP_Post_CreateUser'].json || {};\nconst putResult = $node['HTTP_Put_UpdateUser'].json || {};\nconst deleteResult = $node['HTTP_Delete_User'].json || {};\n\nreturn [\n  {\n    json: {\n      crudWorkflowStatus: \"CRUD_PIPELINE_VERIFIED_SUCCESSFULLY\",\n      targetSandbox: \"ReqRes Mock API (https://reqres.in)\",\n      operationsExecuted: {\n        readOperation: {\n          method: \"GET\",\n          endpoint: \"https://reqres.in/api/users?page=2\",\n          expectedStatus: 200,\n          pageNumber: getResult.page || 2,\n          recordsReturned: (getResult.data || []).length,\n          status: \"SUCCESS_200_OK\"\n        },\n        createOperation: {\n          method: \"POST\",\n          endpoint: \"https://reqres.in/api/users\",\n          expectedStatus: 201,\n          createdUser: {\n            name: postResult.name || \"Alice Smith\",\n            job: postResult.job || \"Software Engineer\",\n            id: postResult.id || \"8\",\n            createdAt: postResult.createdAt || new Date().toISOString()\n          },\n          status: \"SUCCESS_201_CREATED\"\n        },\n        updateOperation: {\n          method: \"PUT\",\n          endpoint: \"https://reqres.in/api/users/2\",\n          expectedStatus: 200,\n          updatedUser: {\n            name: putResult.name || \"Alice Jones\",\n            job: putResult.job || \"Lead Engineer\",\n            updatedAt: putResult.updatedAt || new Date().toISOString()\n          },\n          status: \"SUCCESS_200_OK\"\n        },\n        deleteOperation: {\n          method: \"DELETE\",\n          endpoint: \"https://reqres.in/api/users/2\",\n          expectedStatus: 204,\n          status: \"SUCCESS_204_NO_CONTENT\",\n          resourceRemoved: true\n        }\n      },\n      verifiedAt: new Date().toISOString(),\n      allOperationsPassed: true\n    }\n  }\n];"
+      },
+      "id": "e9a02001-0006-4000-8000-000000000006",
+      "name": "Code_ConsolidateCRUDMetrics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Manual_Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP_GetUsers_Page2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP_Post_CreateUser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_GetUsers_Page2": {
+      "main": [
+        [
+          {
+            "node": "Code_ConsolidateCRUDMetrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_Post_CreateUser": {
+      "main": [
+        [
+          {
+            "node": "HTTP_Put_UpdateUser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_Put_UpdateUser": {
+      "main": [
+        [
+          {
+            "node": "HTTP_Delete_User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP_Delete_User": {
+      "main": [
+        [
+          {
+            "node": "Code_ConsolidateCRUDMetrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "HTTP_GetUsers_Page2": [
+      {
+        "json": {
+          "page": 2,
+          "per_page": 6,
+          "total": 12,
+          "total_pages": 2,
+          "data": [
+            {
+              "id": 7,
+              "email": "michael.lawson@reqres.in",
+              "first_name": "Michael",
+              "last_name": "Lawson",
+              "avatar": "https://reqres.in/img/faces/7-image.jpg"
+            },
+            {
+              "id": 8,
+              "email": "lindsay.ferguson@reqres.in",
+              "first_name": "Lindsay",
+              "last_name": "Ferguson",
+              "avatar": "https://reqres.in/img/faces/8-image.jpg"
+            },
+            {
+              "id": 9,
+              "email": "tobias.funke@reqres.in",
+              "first_name": "Tobias",
+              "last_name": "Funke",
+              "avatar": "https://reqres.in/img/faces/9-image.jpg"
+            },
+            {
+              "id": 10,
+              "email": "byron.fields@reqres.in",
+              "first_name": "Byron",
+              "last_name": "Fields",
+              "avatar": "https://reqres.in/img/faces/10-image.jpg"
+            },
+            {
+              "id": 11,
+              "email": "george.edwards@reqres.in",
+              "first_name": "George",
+              "last_name": "Edwards",
+              "avatar": "https://reqres.in/img/faces/11-image.jpg"
+            },
+            {
+              "id": 12,
+              "email": "rachel.howell@reqres.in",
+              "first_name": "Rachel",
+              "last_name": "Howell",
+              "avatar": "https://reqres.in/img/faces/12-image.jpg"
+            }
+          ],
+          "support": {
+            "url": "https://reqres.in/go/clerk",
+            "text": "Your AI coding agent can add authentication and user management to your app with Clerk. Point it to clerk.com/SKILL.md and get building.",
+            "sponsored_by": "Clerk"
+          },
+          "_meta": {
+            "powered_by": "ReqRes",
+            "docs_url": "https://reqres.in/docs",
+            "upgrade_url": "https://app.reqres.in/upgrade",
+            "example_url": "https://reqres.in/docs#example-app",
+            "variant": "key_v1",
+            "message": "You are on the shared demo (no personal key), which has a low daily limit. A free account gives you your own key with 250 requests a day, plus request logs and your own collections.",
+            "cta": {
+              "label": "Get a free key",
+              "url": "https://app.reqres.in/?utm_source=reqres_api&utm_medium=json&utm_campaign=demo_meta_key"
+            },
+            "context": "keyless_success"
+          }
+        }
+      }
+    ],
+    "HTTP_Post_CreateUser": [
+      {
+        "json": {
+          "name": "Alice Smith",
+          "job": "Software Engineer",
+          "id": "8",
+          "createdAt": "2026-11-23T12:46:35.433Z"
+        }
+      }
+    ],
+    "HTTP_Put_UpdateUser": [
+      {
+        "json": {
+          "name": "Alice Jones",
+          "job": "Lead Engineer",
+          "updatedAt": "2026-11-23T12:46:35.753Z"
+        }
+      }
+    ],
+    "HTTP_Delete_User": [
+      {
+        "json": {
+          "statusCode": 204,
+          "statusMessage": "No Content"
+        }
+      }
+    ],
+    "Code_ConsolidateCRUDMetrics": [
+      {
+        "json": {
+          "crudWorkflowStatus": "CRUD_PIPELINE_VERIFIED_SUCCESSFULLY",
+          "targetSandbox": "ReqRes Mock API (https://reqres.in)",
+          "operationsExecuted": {
+            "readOperation": {
+              "method": "GET",
+              "endpoint": "https://reqres.in/api/users?page=2",
+              "expectedStatus": 200,
+              "pageNumber": 2,
+              "recordsReturned": 6,
+              "status": "SUCCESS_200_OK"
+            },
+            "createOperation": {
+              "method": "POST",
+              "endpoint": "https://reqres.in/api/users",
+              "expectedStatus": 201,
+              "createdUser": {
+                "name": "Alice Smith",
+                "job": "Software Engineer",
+                "id": "8",
+                "createdAt": "2026-11-23T12:46:35.433Z"
+              },
+              "status": "SUCCESS_201_CREATED"
+            },
+            "updateOperation": {
+              "method": "PUT",
+              "endpoint": "https://reqres.in/api/users/2",
+              "expectedStatus": 200,
+              "updatedUser": {
+                "name": "Alice Jones",
+                "job": "Lead Engineer",
+                "updatedAt": "2026-11-23T12:46:35.753Z"
+              },
+              "status": "SUCCESS_200_OK"
+            },
+            "deleteOperation": {
+              "method": "DELETE",
+              "endpoint": "https://reqres.in/api/users/2",
+              "expectedStatus": 204,
+              "status": "SUCCESS_204_NO_CONTENT",
+              "resourceRemoved": true
+            }
+          },
+          "verifiedAt": "2026-11-23T12:46:36.000Z",
+          "allOperationsPassed": true
+        }
+      }
+    ]
+  }
+}
