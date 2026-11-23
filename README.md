@@ -31,28 +31,26 @@ In enterprise systems integration, interacting with RESTful services requires ma
 ### 2.1 ASCII Canvas Architecture
 
 ```
-                                [ MANUAL TRIGGER ]
-                                        │
-                 ┌──────────────────────┴──────────────────────┐
-                 ▼ (Parallel Query)                            ▼ (Sequential CRUD Mutation)
-       [ HTTP_GetUsers_Page2 ]                       [ HTTP_Post_CreateUser ]
-       (GET /api/users?page=2)                       (POST /api/users) -> 201 Created
-                 │                                             │
-                 │                                             ▼
-                 │                                   [ HTTP_Put_UpdateUser ]
-                 │                                   (PUT /api/users/2) -> 200 OK
-                 │                                             │
-                 │                                             ▼
-                 │                                    [ HTTP_Delete_User ]
-                 │                                    (DELETE /api/users/2) -> 204 No Content
-                 │                                             │
-                 └──────────────────────┬──────────────────────┘
-                                        ▼
-                         [ Code_ConsolidateCRUDMetrics ]
-               (Validates All 4 Verbs: GET, POST, PUT, DELETE)
-                                        │
-                                        ▼
-                  Status: CRUD_PIPELINE_VERIFIED_SUCCESSFULLY
+[ Manual_Trigger ]
+        │
+        ▼
+[ HTTP_GetUsers_Page2 ]       (GET /api/users?page=2)      -> HTTP 200 OK
+        │
+        ▼
+[ HTTP_Post_CreateUser ]      (POST /api/users)             -> HTTP 201 Created
+        │
+        ▼
+[ HTTP_Put_UpdateUser ]       (PUT /api/users/2)            -> HTTP 200 OK
+        │
+        ▼
+[ HTTP_Delete_User ]          (DELETE /api/users/2)         -> HTTP 204 No Content
+        │
+        ▼
+[ Code_ConsolidateCRUDMetrics ]
+(Validates All 4 Verbs: GET, POST, PUT, DELETE in Sequential Flow)
+        │
+        ▼
+Status: CRUD_PIPELINE_VERIFIED_SUCCESSFULLY
 ```
 
 ### 2.2 Mermaid Sequence Diagram
@@ -65,19 +63,16 @@ sequenceDiagram
     participant API as ReqRes Mock Server (reqres.in)
     participant Telemetry as Telemetry Validator
 
-    Dev->>n8n: Click "Test workflow"
-    par Branch 1: Paginated Read (GET)
-        n8n->>API: GET /api/users?page=2
-        API-->>n8n: HTTP 200 OK (6 User Records)
-    and Branch 2: Sequential State Mutations (POST -> PUT -> DELETE)
-        n8n->>API: POST /api/users {"name": "Alice Smith", "job": "Software Engineer"}
-        API-->>n8n: HTTP 201 Created {"id": "8", "createdAt": "..."}
-        n8n->>API: PUT /api/users/2 {"name": "Alice Jones", "job": "Lead Engineer"}
-        API-->>n8n: HTTP 200 OK {"updatedAt": "..."}
-        n8n->>API: DELETE /api/users/2
-        API-->>n8n: HTTP 204 No Content (Empty Body)
-    end
-    n8n->>Telemetry: Consolidate Responses from All 4 Nodes
+    Dev->>n8n: Click "Execute workflow"
+    n8n->>API: 1. GET /api/users?page=2
+    API-->>n8n: HTTP 200 OK (6 User Records)
+    n8n->>API: 2. POST /api/users {"name": "Alice Smith", "job": "Software Engineer"}
+    API-->>n8n: HTTP 201 Created {"id": "8", "createdAt": "..."}
+    n8n->>API: 3. PUT /api/users/2 {"name": "Alice Jones", "job": "Lead Engineer"}
+    API-->>n8n: HTTP 200 OK {"updatedAt": "..."}
+    n8n->>API: 4. DELETE /api/users/2
+    API-->>n8n: HTTP 204 No Content (Empty Body)
+    n8n->>Telemetry: Consolidate Responses from All 4 CRUD Nodes
     Telemetry-->>Dev: Output Status: CRUD_PIPELINE_VERIFIED_SUCCESSFULLY
 ```
 
